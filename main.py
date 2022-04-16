@@ -12,6 +12,15 @@ logging.basicConfig(level=logging.INFO)
 _log=logging.getLogger("MAIN")
 
 def create_db_engine(password,host,db_name):
+    """Creates the data bases engine 
+
+    Args:
+        password (str): password of database connection
+        host (str): hostname of database connection
+        db_name (str): database to connect
+    Returns:
+        Connection object tp create engine
+    """
     CONNECTION_STR=f"mysql+pymysql://root:{password}@{host}/{db_name}"
     db_engine=create_engine(CONNECTION_STR,echo=True)
     return db_engine
@@ -28,9 +37,19 @@ class SchemaContainer:
             pass
     
     def _create_namespace(self,table_name,column_data:list):
-        '''
-           Create the namespace {__tablename__:"tablename",...} for the Mapping class 
-        '''
+        """Creates the namespace required for creating a SQLalchemy mapping table.
+            The namespace is created as a dictionary so that the mapping class can be created dynamically.
+            This method is called after the schema file is read.
+        Args:
+            table_name (str): the name of the table to be mapped into database.
+            column_data (list): The mapping of columns indicating which type of column to create.
+                                This data is found from reading the json file indicating the schema.
+                                This json  
+        Returns:
+            dict: The dictonary representing the namespace
+        Example:
+            {__tablename__:"tablename",...}
+        """
         name_space={"__tablename__":table_name,
                     "id":Column(Integer,primary_key=True)}
         
@@ -42,12 +61,27 @@ class SchemaContainer:
         return name_space
 
     def read_schema_object(self,file_path):
-        '''
-            Create the object from json file and create dynamic class and assign them as attributes.
-            The structure of the object created is as follows:-
-            obj.schema=parsed value of the json file containing meta data about excel data.
-            obj.<table1> .... obj.<tableN> =dynamically created class based on the meta data.
-        '''
+        """Reads the schema file, to create different mapping class,dynamically
+            For example:
+                ++++++++++++ schmea +++++++++++++
+                {   "sheetname":"Sheet1",
+                    "tablename":"Student",
+                    "columns":[
+                        {"name":"Name","datatype":"String","size":10},
+                        {"name":"Age","datatype":"Integer","size":2},
+                        {"name":"Marks","datatype":"Integer","size":3}
+                    ]
+                }
+
+                ++++++++++++ Mapping class ++++++++
+                class Student(Base):
+                    __tablename__ = "Student"
+                    id:int = Column(Integer,primary_key=True)
+                    ..
+
+        Args:
+            file_path (str): The json file path for schemafile
+        """
         schema=jc.convert_json(file_path)
         setattr(self,"schema",schema)
         for sheet in schema.sheets:
@@ -60,6 +94,16 @@ class ExcelReader:
         self.file_path=file_path
 
     def insertData(self,data,table,engine,columns):
+        """Inserts Data into database tables.
+        Args:
+            data (list): list of all rows to be inserted into database
+            table (object): The mapping class 
+            engine (object): The database engine 
+            columns (list): The list of columns to create a dictionary of parameters 
+                            which can be used for initilaizing the class.
+                            example:
+                                {"name":"abc","class":12}
+        """
         with Session(engine) as session:
             for row in data:
                 attribute_dict={key:value for key,value in zip(columns,row)}
@@ -67,14 +111,17 @@ class ExcelReader:
                 session.add(table(**attribute_dict))
             session.commit()
 
-    def readData(self,push_data,engine):
+    def readData(self,engine):
+        """Reads the excel data and converts into dataframe
+        Args:
+            engine (Object): SQLalchemy database engine.
+        """
         for sheet in self.schema.sheets:
             print(sheet.sheetname)
             df=pd.read_excel(io=self.file_path,sheet_name=sheet.sheetname,engine="openpyxl")
             columns=df.columns
             table=getattr(self.schemaObj,sheet.tablename)
-            if push_data:
-                self.insertData(df.values,table,engine,columns)
+            self.insertData(df.values,table,engine,columns)
 
 if __name__ == "__main__":
     ROOT_PATH=os.path.dirname(__file__)
