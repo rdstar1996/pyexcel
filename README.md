@@ -4,10 +4,10 @@
 
 ### The project explores a way to insert data from excel files into any database.
 
-    1.  The idea of the project is to use to define a **schema.json** file which contains information about,
-        different database table, which is idicated by "tablename" and "columns".
-    2.  The data about the data base should be a **excel file**, where in a excel file different sheet eg:"sheet1","sheet2"
-        contains data for the database. The reference of "sheetname" in the json file will point to sheetname in excel. 
+*  The idea of the project is to use to define a ** schema.json ** file which contains information about,
+    different database table, which is idicated by "tablename" and "columns".
+*  The data about the data base should be a ** excel file **, where in a excel file different sheet eg:"sheet1","sheet2"
+    contains data for the database. The reference of "sheetname" in the json file will point to sheetname in excel. 
     Example:
             {
                 "sheetname":"Sheet1",
