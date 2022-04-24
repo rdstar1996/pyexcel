@@ -32,6 +32,12 @@
                     }
                 ]
             }
+
+### To run the Script
+            python .\main.py --hostname=localhost --password=password --database=giraffe .\testdata\schema.json .\testdata\Marksheet.xlsx
+    
+    For additional help
+             python .\main.py -h
     
 
 
