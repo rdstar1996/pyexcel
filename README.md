@@ -11,21 +11,25 @@
     contains data for the database. The reference of "sheetname" in the json file will point to sheetname in excel.
 
             {
-                "sheetname":"Sheet1",
-                "tablename":"Teacher",
-                "columns":[
-                    {"name":"Name","datatype":"String","size":10},
-                    {"name":"Subject","datatype":"String","size":10}
-                ]
-            },
-            {   "sheetname":"Sheet2",
-                "tablename":"Student",
-                "columns":[
-                    {"name":"Teach_id","datatype":"Integer","ForeignTable":"Teacher"},
-                    {"name":"Name","datatype":"String","size":10},
-                    {"name":"Age","datatype":"Integer"},
-                    {"name":"Subject","datatype":"String","size":10},
-                    {"name":"Marks","datatype":"Integer"}
+                "sheets":[
+                    {
+                        "sheetname":"Sheet1",
+                        "tablename":"Teacher",
+                        "columns":[
+                            {"name":"Name","datatype":"String","size":10},
+                            {"name":"Subject","datatype":"String","size":10}
+                        ]
+                    },
+                    {   "sheetname":"Sheet2",
+                        "tablename":"Student",
+                        "columns":[
+                            {"name":"Teach_id","datatype":"Integer","ForeignTable":"Teacher"},
+                            {"name":"Name","datatype":"String","size":10},
+                            {"name":"Age","datatype":"Integer"},
+                            {"name":"Subject","datatype":"String","size":10},
+                            {"name":"Marks","datatype":"Integer"}
+                        ]
+                    }
                 ]
             }
     
