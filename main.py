@@ -1,12 +1,13 @@
-from cmath import log
 from dataclasses import make_dataclass
 from library import jsonconverter as jc
+import importlib
 import os
 import pandas as pd
 import logging
-from sqlalchemy import Column, Integer, String
+from sqlalchemy import Column, Integer, ForeignKey
 from sqlalchemy.orm import declarative_base,Session
 from sqlalchemy import create_engine
+import argparse
 
 logging.basicConfig(level=logging.INFO)
 _log=logging.getLogger("MAIN")
@@ -36,6 +37,23 @@ class SchemaContainer:
         else:
             pass
     
+    def _create_column(self,column):
+        fk=None
+        datatype=None
+        size=None
+        if hasattr(column,"ForeignTable"):
+            foreign_table=column.ForeignTable
+            fk=ForeignKey(f"{foreign_table}.id")
+        if hasattr(column,"datatype"):
+            exec(f"from sqlalchemy import {column.datatype}") #dynamically import sqlalchemy datatypes
+            datatype=locals().get(column.datatype) # get the datatype class from local namespace
+            if hasattr(column,"size"):
+                size=column.size
+                col=Column(datatype(size),fk)
+            else:
+                col=Column(datatype,fk)
+        return col       
+        
     def _create_namespace(self,table_name,column_data:list):
         """Creates the namespace required for creating a SQLalchemy mapping table.
             The namespace is created as a dictionary so that the mapping class can be created dynamically.
@@ -54,10 +72,7 @@ class SchemaContainer:
                     "id":Column(Integer,primary_key=True)}
         
         for column in column_data:
-            if column.datatype=="Integer":
-                name_space[column.name]=Column(Integer)
-            if column.datatype=="String":
-                name_space[column.name]=Column(String(column.size))
+            name_space[column.name]=self._create_column(column)
         return name_space
 
     def read_schema_object(self,file_path):
@@ -107,7 +122,6 @@ class ExcelReader:
         with Session(engine) as session:
             for row in data:
                 attribute_dict={key:value for key,value in zip(columns,row)}
-                print(attribute_dict)
                 session.add(table(**attribute_dict))
             session.commit()
 
@@ -124,10 +138,19 @@ class ExcelReader:
             self.insertData(df.values,table,engine,columns)
 
 if __name__ == "__main__":
-    ROOT_PATH=os.path.dirname(__file__)
-    SCHEMA_PATH=os.path.join(ROOT_PATH,"testdata","schema.json")
-    EXCEL_PATH=os.path.join(ROOT_PATH,"testdata","Marksheet.xlsx")
-    db_engine=create_db_engine("password","localhost","giraffe")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--hostname",help="hostname of database",dest="hostname",default="localhost")
+    parser.add_argument("--password",help="password for database",dest="password",default="password")
+    parser.add_argument("--database",help="database name",dest="dbname")
+    parser.add_argument("schemapath",help="path for schema json file")
+    parser.add_argument("excelpath",help="path for excel data")
+    args=parser.parse_args()
+    SCHEMA_PATH=args.schemapath
+    EXCEL_PATH=args.excelpath
+    PASS=args.password
+    HOST=args.hostname
+    DB=args.dbname 
+    db_engine=create_db_engine(PASS,HOST,DB)
     sc=SchemaContainer(SCHEMA_PATH,True,db_engine)
     er=ExcelReader(sc,EXCEL_PATH)
-    er.readData(push_data=True,engine=db_engine)
+    er.readData(engine=db_engine)
