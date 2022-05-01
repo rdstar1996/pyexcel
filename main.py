@@ -38,21 +38,28 @@ class SchemaContainer:
             pass
     
     def _create_column(self,column):
-        fk=None
-        datatype=None
-        size=None
-        if hasattr(column,"ForeignTable"):
-            foreign_table=column.ForeignTable
-            fk=ForeignKey(f"{foreign_table}.id")
+        positional_args=[] # to add positional arguments make sure the order is correct. 
+                            #To check the order see the Column defination in sqlalchecmy
+        keyword_args={}  # key word arguments comes after positional arguments.
+
         if hasattr(column,"datatype"):
             exec(f"from sqlalchemy import {column.datatype}") #dynamically import sqlalchemy datatypes
             datatype=locals().get(column.datatype) # get the datatype class from local namespace
             if hasattr(column,"size"):
                 size=column.size
-                col=Column(datatype(size),fk)
+                positional_args.append(datatype(size))
             else:
-                col=Column(datatype,fk)
-        return col       
+                positional_args.append(datatype)
+
+        if hasattr(column,"PrimaryKey"):
+            keyword_args["primary_key"]=column.PrimaryKey # keyworded argument
+
+        if hasattr(column,"ForeignTable"):
+            foreign_table=column.ForeignTable
+            positional_args.append(ForeignKey(f"{foreign_table}.{column.name}"))
+        
+        
+        return Column(*positional_args,**keyword_args)       
         
     def _create_namespace(self,table_name,column_data:list):
         """Creates the namespace required for creating a SQLalchemy mapping table.
@@ -68,8 +75,7 @@ class SchemaContainer:
         Example:
             {__tablename__:"tablename",...}
         """
-        name_space={"__tablename__":table_name,
-                    "id":Column(Integer,primary_key=True)}
+        name_space={"__tablename__":table_name} 
         
         for column in column_data:
             name_space[column.name]=self._create_column(column)
@@ -131,11 +137,9 @@ class ExcelReader:
             engine (Object): SQLalchemy database engine.
         """
         for sheet in self.schema.sheets:
-            print(sheet.sheetname)
             df=pd.read_excel(io=self.file_path,sheet_name=sheet.sheetname,engine="openpyxl")
-            columns=df.columns
             table=getattr(self.schemaObj,sheet.tablename)
-            self.insertData(df.values,table,engine,columns)
+            self.insertData(df.values,table,engine,df.columns)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
